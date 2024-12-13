@@ -1,12 +1,16 @@
 import os
-from PyQt6.QtWidgets import QMainWindow, QTabWidget, QTreeView, QSplitter, QFileDialog, QVBoxLayout, QWidget, QPushButton, QToolBar, QHeaderView, QTableWidgetItem, QStyleOptionHeader, QStyle
+from PyQt6.QtWidgets import QMainWindow, QTabWidget, QTreeView, QSplitter, QFileDialog, QVBoxLayout, QWidget, QPushButton, QToolBar, QHeaderView, QTableWidgetItem, QStyleOptionHeader, QStyle, QMessageBox
 from PyQt6.QtGui import QAction, QKeySequence, QFileSystemModel, QActionGroup, QIcon, QPainter
 from PyQt6.QtCore import Qt, QDir, QTimer, QSize, QRect, QSortFilterProxyModel
 from PyQt6.QtCore import QLoggingCategory, QCoreApplication
 from modules.editor import Editor
 from modules.file_manager import FileManager
 from modules.settings import Settings
+from modules.updater import check_and_prompt_for_update
 import qdarktheme
+from packaging import version
+import requests
+import subprocess
 
 
 class FileNameProxyModel(QSortFilterProxyModel):
@@ -15,6 +19,8 @@ class FileNameProxyModel(QSortFilterProxyModel):
         self.setDynamicSortFilter(True)
         self.folders_first = True
         self.sort_order = Qt.SortOrder.AscendingOrder
+        QTimer.singleShot(0, self.check_for_updates_silently)
+
 
     def columnCount(self, parent=None):
         return 1
@@ -182,6 +188,9 @@ class Notepad(QMainWindow):
         self.autosave_action.setChecked(self.settings.get_autosave_enabled())
         self.autosave_action.triggered.connect(self.toggle_autosave)
         settings_menu.addAction(self.autosave_action)
+        check_updates_action = QAction('Check for Updates', self)
+        check_updates_action.triggered.connect(self.check_for_updates)
+        settings_menu.addAction(check_updates_action)
 
         theme_menu = settings_menu.addMenu('Theme')
         theme_group = QActionGroup(self)
@@ -295,7 +304,7 @@ class Notepad(QMainWindow):
     def setup_autosave(self):
         self.autosave_timer = QTimer(self)
         self.autosave_timer.timeout.connect(self.file_manager.autosave)
-        self.autosave_timer.start(300000)  # Autosave every 5 minutes (300,000 ms)
+        self.autosave_timer.start(5000)  # Autosave every 5 minutes (300,000 ms)
 
     def open_folder(self):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -383,14 +392,17 @@ class Notepad(QMainWindow):
     def setup_autosave(self):
         self.autosave_timer = QTimer(self)
         self.autosave_timer.timeout.connect(self.file_manager.autosave)
-
-    def toggle_autosave(self):
-        if self.autosave_action.isChecked():
-            self.autosave_timer.start()
-            self.settings.set_autosave_enabled(True)
+        if self.settings.get_autosave_enabled():
+            self.autosave_timer.start(5000)
         else:
             self.autosave_timer.stop()
-            self.settings.set_autosave_enabled(False)
+
+    def toggle_autosave(self, enabled):
+        self.settings.set_autosave_enabled(enabled)
+        if enabled:
+            self.autosave_timer.start(5000)
+        else:
+            self.autosave_timer.stop()
 
     def change_theme(self, action):
         theme = action.data()
@@ -409,3 +421,52 @@ class Notepad(QMainWindow):
         current_editor = self.tab_widget.currentWidget()
         if isinstance(current_editor, Editor):
             current_editor.show_find_widget()
+
+    def check_for_updates_silently(self):
+        self.check_for_updates(silent=True)
+
+    def check_for_updates(self, silent=False):
+        current_version = "1.0.0"  # Replace with your current version
+        github_api_url = "https://api.github.com/repos/feketefh/pady/releases/latest"
+        
+        # Get the AppData path for Pady
+        appdata_path = os.path.join(os.getenv('APPDATA'), 'Pady')
+        update_exe = os.path.join(appdata_path, 'updater.exe')
+
+        try:
+            response = requests.get(github_api_url)
+            response.raise_for_status()
+            latest_release = response.json()
+            latest_version = latest_release['tag_name'].lstrip('v')  # Remove 'v' prefix if present
+
+            if version.parse(latest_version) > version.parse(current_version):
+                if not silent:
+                    reply = QMessageBox.question(
+                        self,
+                        "Update Available",
+                        f"A new version ({latest_version}) is available. Do you want to update?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.No
+                    )
+                    if reply == QMessageBox.StandardButton.Yes:
+                        try:
+                            if os.path.exists(update_exe):
+                                subprocess.Popen(update_exe)
+                                self.close()  # Close the current application
+                            else:
+                                QMessageBox.critical(self, "Update Error", f"Updater not found at {update_exe}")
+                        except Exception as e:
+                            QMessageBox.critical(self, "Update Error", f"Failed to start the update process: {str(e)}")
+                else:
+                    # Silently log that an update is available
+                    print(f"Update available: version {latest_version}")
+            else:
+                if not silent:
+                    QMessageBox.information(self, "No Updates", "You are using the latest version.")
+        except requests.RequestException:
+            if not silent:
+                QMessageBox.warning(self, "Update Check Failed", "Failed to check for updates. Please try again later.")
+        except Exception as e:
+            # Catch any other exceptions and ignore them in silent mode
+            if not silent:
+                QMessageBox.warning(self, "Update Check Failed", f"An unexpected error occurred while checking for updates: {str(e)}")

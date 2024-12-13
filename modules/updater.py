@@ -1,62 +1,46 @@
 import requests
-from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QMessageBox
+import subprocess
 
 class UpdateChecker:
-    def __init__(self, current_version):
+    def __init__(self, current_version, update_url, update_exe):
         self.current_version = current_version
-        self.update_url = "https://api.github.com/repos/yourusername/yourrepo/releases/latest"  # Replace with your actual URL
+        self.update_url = update_url
+        self.update_exe = update_exe
 
     def check_for_updates(self):
         try:
             response = requests.get(self.update_url)
             response.raise_for_status()
-            latest_release = response.json()
-            latest_version = latest_release['tag_name']
+            latest_version = response.text.strip()
             
             if self.is_newer_version(latest_version):
-                return latest_version, latest_release['body']
-            return None, None
+                return latest_version
+            return None
         except requests.RequestException:
-            return None, None
+            return None
 
     def is_newer_version(self, latest_version):
-        # Implement version comparison logic here
-        # This is a simple string comparison, you might want to use a more robust method
         return latest_version > self.current_version
 
-class UpdateDialog(QDialog):
-    def __init__(self, version, details):
-        super().__init__()
-        self.setWindowTitle("Update Available")
-        self.setGeometry(200, 200, 300, 200)
+    def prompt_for_update(self, parent, latest_version):
+        reply = QMessageBox.question(parent, 'Update Available',
+                                     f"A new version ({latest_version}) is available. Do you want to update?",
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                     QMessageBox.StandardButton.No)
+        return reply == QMessageBox.StandardButton.Yes
 
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel(f"A new version {version} is available!"))
-        layout.addWidget(QLabel("Update details:"))
-        layout.addWidget(QLabel(details))
+    def start_update(self):
+        try:
+            subprocess.Popen(self.update_exe)
+        except Exception as e:
+            QMessageBox.critical(None, "Update Error", f"Failed to start the update process: {str(e)}")
 
-        update_button = QPushButton("Update")
-        update_button.clicked.connect(self.accept)
-        layout.addWidget(update_button)
-
-        skip_button = QPushButton("Skip")
-        skip_button.clicked.connect(self.reject)
-        layout.addWidget(skip_button)
-
-        self.setLayout(layout)
-
-def check_and_prompt_for_update(parent, current_version):
-    checker = UpdateChecker(current_version)
-    new_version, details = checker.check_for_updates()
-    
-    if new_version:
-        dialog = UpdateDialog(new_version, details)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            # User chose to update
-            # Implement update process here
-            QMessageBox.information(parent, "Update", "Updating... (Not implemented)")
-        else:
-            # User chose to skip
-            QMessageBox.information(parent, "Update", "Update skipped")
+def check_and_prompt_for_update(parent, current_version, update_url, update_exe):
+    checker = UpdateChecker(current_version, update_url, update_exe)
+    latest_version = checker.check_for_updates()
+    if latest_version:
+        if checker.prompt_for_update(parent, latest_version):
+            checker.start_update()
     else:
         QMessageBox.information(parent, "Update", "No updates available")

@@ -2,7 +2,7 @@ from PyQt6.QtCore import QSettings
 
 class Settings:
     def __init__(self):
-        self.settings = QSettings("YourCompany", "Notepad")
+        self.settings = QSettings("Kirilov", "Pady")
 
     def save_open_files(self, file_paths):
         self.settings.setValue("open_files", file_paths)
