@@ -64,28 +64,27 @@ class FileManager:
     def save_file(self):
         current_editor = self.notepad.tab_widget.currentWidget()
         if current_editor in self.file_paths:
-            return self.save_file_as(self.file_paths[current_editor])
+            file_path = self.file_paths[current_editor]
+            self._save_to_file(current_editor, file_path)
         else:
-            return self.save_file_as()
+            self.save_file_as()
 
-    def save_file_as(self, file_path=None):
+    def save_file_as(self):
         current_editor = self.notepad.tab_widget.currentWidget()
-        if not file_path:
-            file_path, _ = QFileDialog.getSaveFileName(self.notepad, "Save File")
+        file_path, _ = QFileDialog.getSaveFileName(self.notepad, "Save File", "", "Text Files (*.txt);;All Files (*)")
         if file_path:
-            if isinstance(current_editor, Editor):
-                content = current_editor.toPlainText()
-                try:
-                    with open(file_path, 'w') as file:
-                        file.write(content)
-                    self.file_paths[current_editor] = file_path
-                    self.notepad.tab_widget.setTabText(self.notepad.tab_widget.currentIndex(), os.path.basename(file_path))
-                    return True
-                except PermissionError:
-                    QMessageBox.critical(self.notepad, "Error", f"Permission denied. Unable to save file: {file_path}")
-                except Exception as e:
-                    QMessageBox.critical(self.notepad, "Error", f"Unable to save file: {str(e)}")
-        return False
+            self._save_to_file(current_editor, file_path)
+            self.file_paths[current_editor] = file_path
+            self.notepad.tab_widget.setTabText(self.notepad.tab_widget.currentIndex(), os.path.basename(file_path))
+
+    def _save_to_file(self, editor, file_path):
+        content = editor.toPlainText()
+        try:
+            with open(file_path, 'w', encoding='utf-8') as file:
+                file.write(content)
+            print(f"Saved: {file_path}")  # For debugging
+        except Exception as e:
+            print(f"Save failed for {file_path}: {str(e)}")  # For debugging
 
     def open_file_from_explorer(self, index):
         file_path = self.notepad.file_model.filePath(index)
@@ -93,18 +92,17 @@ class FileManager:
             self.open_file(file_path)
             
     def autosave(self):
-        current_editor = self.notepad.tab_widget.currentWidget()
-        if current_editor in self.file_paths:
-            file_path = self.file_paths[current_editor]
-            if isinstance(current_editor, Editor):
-                content = current_editor.toPlainText()
+        for index in range(self.notepad.tab_widget.count()):
+            editor = self.notepad.tab_widget.widget(index)
+            if editor in self.file_paths:
+                file_path = self.file_paths[editor]
+                content = editor.toPlainText()
                 try:
-                    with open(file_path, 'w') as file:
+                    with open(file_path, 'w', encoding='utf-8') as file:
                         file.write(content)
-                except PermissionError:
-                    QMessageBox.warning(self.notepad, "Autosave Failed", f"Permission denied. Unable to autosave file: {file_path}")
+                    print(f"Autosaved: {file_path}")  # For debugging
                 except Exception as e:
-                    QMessageBox.warning(self.notepad, "Autosave Failed", f"Unable to autosave file: {str(e)}")
+                    print(f"Autosave failed for {file_path}: {str(e)}")  # For debugging
 
     def new_file(self):
         editor = Editor()
