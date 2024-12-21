@@ -19,7 +19,6 @@ class FileNameProxyModel(QSortFilterProxyModel):
         self.setDynamicSortFilter(True)
         self.folders_first = True
         self.sort_order = Qt.SortOrder.AscendingOrder
-        QTimer.singleShot(0, self.check_for_updates_silently)
 
 
     def columnCount(self, parent=None):
@@ -114,6 +113,8 @@ class Notepad(QMainWindow):
         self.setup_autosave()  # Move this before load_settings
         self.load_settings()
         self.load_last_session()
+
+        self.setup_update_checker()
 
         # Load saved window geometry and state
         geometry = self.settings.get_window_geometry()
@@ -421,6 +422,13 @@ class Notepad(QMainWindow):
         current_editor = self.tab_widget.currentWidget()
         if isinstance(current_editor, Editor):
             current_editor.show_find_widget()
+
+    def setup_update_checker(self):
+        # Create a timer for the update check
+        self.update_timer = QTimer(self)
+        self.update_timer.timeout.connect(self.check_for_updates_silently)
+        # Start the timer to check for updates after 5 seconds (5000 ms)
+        self.update_timer.start(5000)
 
     def check_for_updates_silently(self):
         self.check_for_updates(silent=True)
