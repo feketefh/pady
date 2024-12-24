@@ -6,7 +6,6 @@ from PyQt6.QtCore import QLoggingCategory, QCoreApplication
 from modules.editor import Editor
 from modules.file_manager import FileManager
 from modules.settings import Settings
-from modules.updater import check_and_prompt_for_update
 import qdarktheme
 from packaging import version
 import requests
@@ -114,7 +113,6 @@ class Notepad(QMainWindow):
         self.load_settings()
         self.load_last_session()
 
-        self.setup_update_checker()
 
         # Load saved window geometry and state
         geometry = self.settings.get_window_geometry()
@@ -189,9 +187,6 @@ class Notepad(QMainWindow):
         self.autosave_action.setChecked(self.settings.get_autosave_enabled())
         self.autosave_action.triggered.connect(self.toggle_autosave)
         settings_menu.addAction(self.autosave_action)
-        check_updates_action = QAction('Check for Updates', self)
-        check_updates_action.triggered.connect(self.check_for_updates)
-        settings_menu.addAction(check_updates_action)
 
         theme_menu = settings_menu.addMenu('Theme')
         theme_group = QActionGroup(self)
@@ -422,59 +417,3 @@ class Notepad(QMainWindow):
         current_editor = self.tab_widget.currentWidget()
         if isinstance(current_editor, Editor):
             current_editor.show_find_widget()
-
-    def setup_update_checker(self):
-        # Create a timer for the update check
-        self.update_timer = QTimer(self)
-        self.update_timer.timeout.connect(self.check_for_updates_silently)
-        # Start the timer to check for updates after 5 seconds (5000 ms)
-        self.update_timer.start(5000)
-
-    def check_for_updates_silently(self):
-        self.check_for_updates(silent=True)
-
-    def check_for_updates(self, silent=False):
-        current_version = "1.0.0"  # Replace with your current version
-        github_api_url = "https://api.github.com/repos/feketefh/pady/releases/latest"
-        
-        # Get the AppData path for Pady
-        appdata_path = os.path.join(os.getenv('APPDATA'), 'Pady')
-        update_exe = os.path.join(appdata_path, 'updater.exe')
-
-        try:
-            response = requests.get(github_api_url)
-            response.raise_for_status()
-            latest_release = response.json()
-            latest_version = latest_release['tag_name'].lstrip('v')  # Remove 'v' prefix if present
-
-            if version.parse(latest_version) > version.parse(current_version):
-                if not silent:
-                    reply = QMessageBox.question(
-                        self,
-                        "Update Available",
-                        f"A new version ({latest_version}) is available. Do you want to update?",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                        QMessageBox.StandardButton.No
-                    )
-                    if reply == QMessageBox.StandardButton.Yes:
-                        try:
-                            if os.path.exists(update_exe):
-                                subprocess.Popen(update_exe)
-                                self.close()  # Close the current application
-                            else:
-                                QMessageBox.critical(self, "Update Error", f"Updater not found at {update_exe}")
-                        except Exception as e:
-                            QMessageBox.critical(self, "Update Error", f"Failed to start the update process: {str(e)}")
-                else:
-                    # Silently log that an update is available
-                    print(f"Update available: version {latest_version}")
-            else:
-                if not silent:
-                    QMessageBox.information(self, "No Updates", "You are using the latest version.")
-        except requests.RequestException:
-            if not silent:
-                QMessageBox.warning(self, "Update Check Failed", "Failed to check for updates. Please try again later.")
-        except Exception as e:
-            # Catch any other exceptions and ignore them in silent mode
-            if not silent:
-                QMessageBox.warning(self, "Update Check Failed", f"An unexpected error occurred while checking for updates: {str(e)}")
