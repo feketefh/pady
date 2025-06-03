@@ -1,0 +1,5 @@
+packaging
+requests
+pyqt6
+pyqtdarktheme
+chardet
