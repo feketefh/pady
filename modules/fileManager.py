@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
-from modules.editor import Editor, PythonHighlighter
+from modules.editor import Editor
 import chardet
 import os
 
@@ -32,10 +32,10 @@ class FileManager:
                 with open(file_path, 'r', encoding=encoding) as file:
                     content = file.read()
     
-                editor = Editor()
+                editor = Editor(path=file_path)
                 editor.setPlainText(content)
-                path = self.get_current_file_path()
-                PythonHighlighter.highlightBlock(content, path)
+                #if file_path.endswith('.py'):
+                #editor.syntax(file_path)
                 index = self.notepad.tab_widget.addTab(editor, os.path.basename(file_path))
                 self.notepad.tab_widget.setCurrentIndex(index)
                 self.file_paths[editor] = file_path
@@ -44,7 +44,7 @@ class FileManager:
                     with open(file_path, 'r', encoding='latin-1') as file:
                         content = file.read()
                     
-                    editor = Editor()
+                    editor = Editor(path=file_path)
                     editor.setPlainText(content)
                     index = self.notepad.tab_widget.addTab(editor, os.path.basename(file_path))
                     self.notepad.tab_widget.setCurrentIndex(index)
@@ -118,7 +118,7 @@ class FileManager:
 
     def open_files_from_session(self, files):
         for file_path, content in files:
-            editor = Editor()
+            editor = Editor(path=file_path)
             editor.setPlainText(content)
             if file_path.startswith("Untitled-"):
                 self.untitled_count += 1
