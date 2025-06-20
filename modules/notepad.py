@@ -6,6 +6,7 @@ from PyQt6.QtCore import QLoggingCategory
 from modules.editor import Editor
 from modules.fileManager import FileManager
 from modules.settings import Settings
+from modules.themeManager import apply_theme
 import qdarktheme
 from packaging import version
 import requests
@@ -394,11 +395,11 @@ class Notepad(QMainWindow):
 
     def set_theme(self, theme):
         if theme == 'system':
-            self.app.setPalette(qdarktheme.load_palette())
+            apply_theme(self.app, theme="system")
         elif theme == 'light':
-            self.app.setPalette(qdarktheme.load_palette(theme="light"))
+            apply_theme(self.app, theme="light")
         elif theme == 'dark':
-            self.app.setPalette(qdarktheme.load_palette(theme="dark"))
+            apply_theme(self.app, theme="dark")
         
     def find_in_current_editor(self):
         current_editor = self.tab_widget.currentWidget()
@@ -406,7 +407,7 @@ class Notepad(QMainWindow):
             current_editor.show_find_widget()
 
     def check_for_updates(self, silent=False):
-        current_version = version.Version("pady-v1.4.3".strip("pady-"))
+        current_version = version.Version("pady-v1.6".strip("pady-"))
         github_api_url = "https://api.github.com/repos/feketefh/pady/releases/latest"
 
         try:
