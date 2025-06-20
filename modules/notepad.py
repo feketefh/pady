@@ -407,7 +407,7 @@ class Notepad(QMainWindow):
             current_editor.show_find_widget()
 
     def check_for_updates(self, silent=False):
-        current_version = version.Version("pady-v1.6".strip("pady-"))
+        current_version = version.Version("pady-v1.6.2".strip("pady-"))
         github_api_url = "https://api.github.com/repos/feketefh/pady/releases/latest"
 
         try:

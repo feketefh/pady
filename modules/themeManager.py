@@ -3,6 +3,7 @@ import platform
 import winreg
 from PyQt6.QtGui import QPalette, QColor
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication
 
 def get_windows_theme():
     is_dark = False
@@ -20,7 +21,8 @@ def get_windows_theme():
         pass
     return "dark" if is_dark else "light"
 
-def apply_theme(app, theme="system"):
+def apply_theme(app, theme="system", main_window=None):
+    app.setStyle("Fusion")
     if theme == "system":
         theme = get_windows_theme()
     palette = QPalette()
@@ -34,6 +36,8 @@ def apply_theme(app, theme="system"):
         palette.setColor(QPalette.ColorRole.Button, QColor("#232629"))
         palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
         palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+        if main_window is not None:
+            main_window.setStyleSheet("")
     else:
         palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.white)
         palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.black)
@@ -44,4 +48,27 @@ def apply_theme(app, theme="system"):
         palette.setColor(QPalette.ColorRole.Button, Qt.GlobalColor.white)
         palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
         palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+        if main_window is not None:
+            main_window.setStyleSheet("""
+            QMenuBar {
+                background: white;
+                color: black;
+            }
+            QMenuBar::item {
+                background: white;
+                color: black;
+            }
+            QMenuBar::item:selected {
+                background: #e0e0e0;
+            }
+            QMenu {
+                background: white;
+                color: black;
+                border: 1px solid #bdbdbd;
+            }
+            QMenu::item:selected {
+                background: #3d6ea8;
+                color: white;
+            }
+            """)
     app.setPalette(palette)
