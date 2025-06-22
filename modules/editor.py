@@ -28,7 +28,7 @@ class Editor(QPlainTextEdit):
         super().__init__()
         self.init_ui()
         self.init_find_widget()
-        self.sytax = PythonHighlighter(self.document(), path)
+        self.syntax = PythonHighlighter(self.document(), path)
 
     def init_ui(self):
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
