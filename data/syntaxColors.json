@@ -1,0 +1,71 @@
+{
+  "python": {
+    "keyword": "#c678dd",
+    "string": "#98c379",
+    "comment": "#5c6370",
+    "number": "#d19a66",
+    "function": "#61afef",
+    "class": "#e5c07b",
+    "decorator": "#b58900"
+  },
+  "javascript": {
+    "keyword": "#d73a49",
+    "string": "#032f62",
+    "comment": "#6a737d",
+    "number": "#005cc5",
+    "function": "#6f42c1",
+    "class": "#e36209"
+  },
+  "java": {
+    "keyword": "#0000ff",
+    "string": "#a31515",
+    "comment": "#008000",
+    "number": "#098658",
+    "function": "#795e26",
+    "class": "#267f99"
+  },
+  "typescript": {
+    "keyword": "#007acc",
+    "string": "#a31515",
+    "comment": "#6a9955",
+    "number": "#b5cea8",
+    "function": "#dcdcaa",
+    "class": "#4ec9b0"
+  },
+  "c++": {
+    "keyword": "#569cd6",
+    "string": "#ce9178",
+    "comment": "#6a9955",
+    "number": "#b5cea8",
+    "function": "#dcdcaa",
+    "class": "#4ec9b0"
+  },
+  "c#": {
+    "keyword": "#569cd6",
+    "string": "#ce9178",
+    "comment": "#57a64a",
+    "number": "#b5cea8",
+    "function": "#dcdcaa",
+    "class": "#4ec9b0"
+  },
+  "html": {
+    "keyword": "#d73a49",
+    "string": "#032f62",
+    "comment": "#6a737d",
+    "number": "#005cc5",
+    "function": "#6f42c1",
+    "class": "#e36209",
+    "tag": "#22863a",
+    "attribute": "#6f42c1"
+  },
+  "css": {
+    "keyword": "#d73a49",
+    "string": "#032f62",
+    "comment": "#6a737d",
+    "number": "#005cc5",
+    "function": "#6f42c1",
+    "class": "#e36209",
+    "property": "#005cc5",
+    "selector": "#22863a"
+  }
+}

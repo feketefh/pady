@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QPlainTextEdit, QWidget, QLineEdit, QHBoxLayout, QPushButton
 from PyQt6.QtGui import QTextCursor, QKeySequence
 from PyQt6.QtCore import Qt
-from modules.syntaxHightlighter import PythonHighlighter
+from modules.syntaxHightlighter import SyntaxHighlighter
 
 
 class FindWidget(QWidget):
@@ -28,7 +28,7 @@ class Editor(QPlainTextEdit):
         super().__init__()
         self.init_ui()
         self.init_find_widget()
-        self.syntax = PythonHighlighter(self.document(), path)
+        self.syntax = SyntaxHighlighter(self.document(), path)
 
     def init_ui(self):
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
