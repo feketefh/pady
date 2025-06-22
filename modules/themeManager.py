@@ -1,9 +1,6 @@
-import sys
-import platform
 import winreg
 from PyQt6.QtGui import QPalette, QColor
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
 
 def get_windows_theme():
     is_dark = False

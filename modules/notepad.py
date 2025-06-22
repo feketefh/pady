@@ -7,7 +7,6 @@ from modules.editor import Editor
 from modules.fileManager import FileManager
 from modules.settings import Settings
 from modules.themeManager import apply_theme
-import qdarktheme
 from packaging import version
 import requests
 import webbrowser
@@ -293,11 +292,6 @@ class Notepad(QMainWindow):
         self.settings.save_window_geometry(self.saveGeometry())
         self.settings.save_window_state(self.saveState())
         event.accept()
-
-    def setup_autosave(self):
-        self.autosave_timer = QTimer(self)
-        self.autosave_timer.timeout.connect(self.file_manager.autosave)
-        self.autosave_timer.start(5000)
 
     def open_folder(self):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
