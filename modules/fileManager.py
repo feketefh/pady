@@ -9,16 +9,25 @@ class FileManager:
         self.untitled_count = 0
         self.last_saved_content = {}
 
+    
     def open_file(self, file_path=None):
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(self.notepad, "Open File", "", "Text Files (*.txt);;All Files (*)")
         
         if file_path:
+            for editor, existing_path in self.file_paths.items():
+                if existing_path == file_path:
+                    index = self.notepad.tab_widget.indexOf(editor)
+                    if index != -1:
+                        self.notepad.tab_widget.setCurrentIndex(index)
+                    return
+            
             self.notepad.settings.add_recent_file(file_path)
             
             editor = Editor(path=file_path, settings=self.notepad.settings)
             if editor.load_file_with_error_handling(file_path):
-                self.notepad.tab_widget.addTab(editor, os.path.basename(file_path))
+                index = self.notepad.tab_widget.addTab(editor, os.path.basename(file_path))
+                self.notepad.tab_widget.setCurrentIndex(index)
                 self.file_paths[editor] = file_path
             else:
                 editor.deleteLater()

@@ -110,7 +110,12 @@ class Editor(QPlainTextEdit):
     def dropEvent(self, event):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
         if files:
-            self.load_file_with_error_handling(files[0])
+            if not self.toPlainText().strip():
+                self.load_file_with_error_handling(files[0])
+            else:
+                event.ignore()
+                return
+        event.accept()
 
     def load_file_with_error_handling(self, file_path):
         """Load file with proper error handling and large file support"""
@@ -136,6 +141,11 @@ class Editor(QPlainTextEdit):
                 self.load_normal_file(file_path)
                 
             self.file_path = file_path
+            
+            if self.syntax:
+                self.syntax.deleteLater()
+            self.syntax = SyntaxHighlighter(self.document(), file_path)
+            
             return True
             
         except PermissionError:

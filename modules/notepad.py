@@ -99,6 +99,7 @@ class Notepad(QMainWindow):
         super().__init__()
         self.setWindowTitle("Pady")
         self.setGeometry(100, 100, 1000, 600)
+        self.setAcceptDrops(True)
 
         self.settings = Settings()
         self.file_manager = FileManager(self)
@@ -245,6 +246,21 @@ class Notepad(QMainWindow):
     
     def on_header_clicked(self, logical_index):
         pass
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        if files:
+            for file_path in files:
+                if os.path.isfile(file_path):
+                    # Open each dropped file in a new tab
+                    self.file_manager.open_file(file_path)
+        event.accept()
 
     def toggle_line_numbers(self, checked):
         self.settings.set('show_line_numbers', checked)
