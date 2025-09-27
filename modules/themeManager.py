@@ -22,6 +22,7 @@ def apply_theme(app, theme="system", main_window=None):
     app.setStyle("Fusion")
     if theme == "system":
         theme = get_windows_theme()
+    
     palette = QPalette()
     if theme == "dark":
         palette.setColor(QPalette.ColorRole.Window, QColor("#232629"))
@@ -33,8 +34,10 @@ def apply_theme(app, theme="system", main_window=None):
         palette.setColor(QPalette.ColorRole.Button, QColor("#232629"))
         palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
         palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+        
         if main_window is not None:
             main_window.setStyleSheet("")
+            refresh_all_editors(main_window)
     else:
         palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.white)
         palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.black)
@@ -45,6 +48,7 @@ def apply_theme(app, theme="system", main_window=None):
         palette.setColor(QPalette.ColorRole.Button, Qt.GlobalColor.white)
         palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
         palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+        
         if main_window is not None:
             main_window.setStyleSheet("""
             QMenuBar {
@@ -68,4 +72,19 @@ def apply_theme(app, theme="system", main_window=None):
                 color: white;
             }
             """)
+            refresh_all_editors(main_window)
+
     app.setPalette(palette)
+
+def refresh_all_editors(main_window):
+    """Refresh line number areas and highlighting for all editors"""
+    try:
+        from modules.editor import Editor
+        tab_widget = main_window.tab_widget
+        for i in range(tab_widget.count()):
+            editor = tab_widget.widget(i)
+            if isinstance(editor, Editor):
+                editor.line_number_area.update()
+                editor.highlight_current_line()
+    except Exception as e:
+        print(f"Error refreshing editors: {e}")

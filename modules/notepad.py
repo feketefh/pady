@@ -112,11 +112,11 @@ class Notepad(QMainWindow):
 
         self.check_for_updates(silent=True)
 
-        geometry = self.settings.get_window_geometry()
+        geometry = self.settings.get('window_geometry')
         if geometry:
             self.restoreGeometry(geometry)
         
-        state = self.settings.get_window_state()
+        state = self.settings.get('window_state')
         if state:
             self.restoreState(state)
 
@@ -177,13 +177,16 @@ class Notepad(QMainWindow):
         view_menu.addAction(toggle_file_explorer)
 
         self.autosave_action = QAction('Autosave', self, checkable=True)
-        self.autosave_action.setChecked(self.settings.get_autosave_enabled())
+        self.autosave_action.setChecked(self.settings.get('autosave_enabled', True))
         self.autosave_action.triggered.connect(self.toggle_autosave)
         settings_menu.addAction(self.autosave_action)
         check_updates_action = QAction('Check for Updates', self)
         check_updates_action.triggered.connect(self.check_for_updates)
         settings_menu.addAction(check_updates_action)
-
+        self.lineNumber = QAction('Line Numbers', self, checkable=True)
+        self.lineNumber.setChecked(self.settings.get('show_line_numbers', True))
+        self.lineNumber.triggered.connect(self.toggle_line_numbers)
+        settings_menu.addAction(self.lineNumber)
         theme_menu = settings_menu.addMenu('Theme')
         theme_group = QActionGroup(self)
 
@@ -193,7 +196,7 @@ class Notepad(QMainWindow):
             theme_action.setData(theme_value)
             theme_group.addAction(theme_action)
             theme_menu.addAction(theme_action)
-            if theme_value == self.settings.get_theme():
+            if theme_value == self.settings.get('theme', 'system'):
                 theme_action.setChecked(True)
 
         theme_group.triggered.connect(self.change_theme)
@@ -243,6 +246,12 @@ class Notepad(QMainWindow):
     def on_header_clicked(self, logical_index):
         pass
 
+    def toggle_line_numbers(self, checked):
+        self.settings.set('show_line_numbers', checked)
+        for i in range(self.tab_widget.count()):
+            editor = self.tab_widget.widget(i)
+            if isinstance(editor, Editor):
+                editor.toggle_line_numbers()
 
     def new_file(self):
         self.file_manager.new_file()
@@ -256,7 +265,15 @@ class Notepad(QMainWindow):
                 self.setWindowTitle("Pady - Untitled")
 
     def close_tab(self, index):
-        self.tab_widget.removeTab(index)
+        """Clean up when a tab is closed"""
+        editor = self.notepad.tab_widget.widget(index)
+        if isinstance(editor, Editor):
+            if editor in self.file_paths:
+                del self.file_paths[editor]
+            if editor in self.last_saved_content:
+                del self.last_saved_content[editor]
+        
+        self.notepad.tab_widget.removeTab(index)
 
     def undo(self):
         current_editor = self.tab_widget.currentWidget()
@@ -280,17 +297,22 @@ class Notepad(QMainWindow):
             self.file_explorer.show()
 
     def load_last_session(self):
-        open_files = self.settings.get_open_files()
-        if open_files:
-            self.file_manager.open_files_from_session(open_files)
+        session_data = self.settings.load_session()
+        if session_data and session_data.get('recent_files'):
+            self.file_manager.open_files_from_session(session_data)
         else:
             self.file_manager.new_file()
 
     def closeEvent(self, event):
-        open_files = self.file_manager.get_all_open_files()
-        self.settings.save_open_files(open_files)
-        self.settings.save_window_geometry(self.saveGeometry())
-        self.settings.save_window_state(self.saveState())
+        session_data = {
+            'recent_files': self.file_manager.get_all_open_files(),
+            'active_tab': self.tab_widget.currentIndex()
+        }
+        
+        self.settings.save_session(session_data)
+        self.settings.set('window_geometry', self.saveGeometry())
+        self.settings.set('window_state', self.saveState())
+        
         event.accept()
 
     def open_folder(self):
@@ -361,8 +383,8 @@ class Notepad(QMainWindow):
             self.current_folder = self.file_model.filePath(self.proxy_model.mapToSource(parent_index))
 
     def load_settings(self):
-        self.set_theme(self.settings.get_theme())
-        if self.settings.get_autosave_enabled():
+        self.set_theme(self.settings.get('theme', 'system'))
+        if self.settings.get('autosave_enabled', True):
             self.autosave_timer.start()
         else:
             self.autosave_timer.stop()
@@ -370,13 +392,13 @@ class Notepad(QMainWindow):
     def setup_autosave(self):
         self.autosave_timer = QTimer(self)
         self.autosave_timer.timeout.connect(self.file_manager.autosave)
-        if self.settings.get_autosave_enabled():
+        if self.settings.get('autosave_enabled', True):
             self.autosave_timer.start(5000)
         else:
             self.autosave_timer.stop()
 
     def toggle_autosave(self, enabled):
-        self.settings.set_autosave_enabled(enabled)
+        self.settings.set('autosave_enabled', enabled)
         if enabled:
             self.autosave_timer.start(5000)
         else:
@@ -385,7 +407,7 @@ class Notepad(QMainWindow):
     def change_theme(self, action):
         theme = action.data()
         self.set_theme(theme)
-        self.settings.set_theme(theme)
+        self.settings.set('theme', theme)
 
     def set_theme(self, theme):
         if theme == 'system':

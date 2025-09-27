@@ -31,10 +31,11 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             ".htm": "html",
             ".css": "css"
         }
-        return ext_map.get(ext, "python")  # fallback to python
+        return ext_map.get(ext, "python")
 
     def load_colors(self):
-        json_path = os.path.join(os.path.dirname(__file__), "syntax_colors.json")
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+        json_path = os.path.join(data_dir, "syntaxColors.json")
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 color_data = json.load(f)
@@ -66,7 +67,7 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             self.add_rule(r'#.*', "comment", italic=True)
             self.add_rule(r'\b\d+(\.\d+)?\b', "number")
             self.add_rule(r'\bdef\s+([A-Za-z_][A-Za-z0-9_]*)', "function", bold=True)
-            self.add_rule(r'\bclass\s+([A-Za-z_][A-Za-z0-9_]*)', "class", bold=True)
+            self.add_rule(r'\bclass\s+([A-Za-z_][A-ZaZ0-9_]*)', "class", bold=True)
             self.add_rule(r'@\w+', "decorator")
 
         elif path and path.endswith((".js", ".ts")):
@@ -84,8 +85,8 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             self.add_rule(r'//.*', "comment", italic=True)
             self.add_rule(r'/\*[\s\S]*?\*/', "comment", italic=True)
             self.add_rule(r'\b\d+(\.\d+)?\b', "number")
-            self.add_rule(r'\bfunction\s+([A-Za-z_][A-Za-z0-9_]*)', "function", bold=True)
-            self.add_rule(r'\bclass\s+([A-Za-z_][A-Za-z0-9_]*)', "class", bold=True)
+            self.add_rule(r'\bfunction\s+([A-Za-z_][A-ZaZ0-9_]*)', "function", bold=True)
+            self.add_rule(r'\bclass\s+([A-Za-z_][A-ZaZ0-9_]*)', "class", bold=True)
 
         elif path and path.endswith(".java"):
             keywords = [
@@ -102,8 +103,8 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             self.add_rule(r'//.*', "comment", italic=True)
             self.add_rule(r'/\*[\s\S]*?\*/', "comment", italic=True)
             self.add_rule(r'\b\d+(\.\d+)?\b', "number")
-            self.add_rule(r'\bclass\s+([A-Za-z_][A-Za-z0-9_]*)', "class", bold=True)
-            self.add_rule(r'\b([A-Za-z_][A-Za-z0-9_]*)\s*\(', "function")
+            self.add_rule(r'\bclass\s+([A-Za-z_][A-ZaZ0-9_]*)', "class", bold=True)
+            self.add_rule(r'\b([A-Za-z_][A-ZaZ0-9_]*)\s*\(', "function")
 
         elif path and path.endswith((".cpp", ".h", ".c", ".hpp", ".cc", ".cxx")):
             keywords = [
@@ -134,7 +135,7 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             self.add_rule(r'/\*[\s\S]*?\*/', "comment", italic=True)
             self.add_rule(r'\b\d+(\.\d+)?\b', "number")
             self.add_rule(r'\bclass\s+([A-Za-z_][A-ZaZ0-9_]*)', "class", bold=True)
-            self.add_rule(r'\b([A-Za-z_][A-Za-z0-9_]*)\s*\(', "function")
+            self.add_rule(r'\b([A-Za-z_][A-ZaZ0-9_]*)\s*\(', "function")
 
         elif path and path.endswith(".html"):
             tag_format = QTextCharFormat()
