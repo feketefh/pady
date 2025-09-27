@@ -266,14 +266,7 @@ class Notepad(QMainWindow):
 
     def close_tab(self, index):
         """Clean up when a tab is closed"""
-        editor = self.notepad.tab_widget.widget(index)
-        if isinstance(editor, Editor):
-            if editor in self.file_paths:
-                del self.file_paths[editor]
-            if editor in self.last_saved_content:
-                del self.last_saved_content[editor]
-        
-        self.notepad.tab_widget.removeTab(index)
+        self.file_manager.close_tab(index)
 
     def undo(self):
         current_editor = self.tab_widget.currentWidget()

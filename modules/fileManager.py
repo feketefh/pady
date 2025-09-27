@@ -179,3 +179,14 @@ class FileManager:
     def get_current_file_path(self):
         current_editor = self.notepad.tab_widget.currentWidget()
         return self.file_paths.get(current_editor)
+
+    def close_tab(self, index):
+        """Clean up when a tab is closed"""
+        editor = self.notepad.tab_widget.widget(index)
+        if isinstance(editor, Editor):
+            if editor in self.file_paths:
+                del self.file_paths[editor]
+            if hasattr(self, 'last_saved_content') and editor in self.last_saved_content:
+                del self.last_saved_content[editor]
+    
+        self.notepad.tab_widget.removeTab(index)
