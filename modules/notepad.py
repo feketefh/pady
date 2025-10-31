@@ -6,18 +6,17 @@ from PyQt6.QtCore import QLoggingCategory
 from modules.editor import Editor
 from modules.fileManager import FileManager
 from modules.settings import Settings
-from modules.themeManager import apply_theme
+from modules.themeManager import applyTheme
 from packaging import version
 import requests
 import webbrowser
-
 
 class FileNameProxyModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setDynamicSortFilter(True)
-        self.folders_first = True
-        self.sort_order = Qt.SortOrder.AscendingOrder
+        self.foldersFirst = True
+        self.sortOrder = Qt.SortOrder.AscendingOrder
 
 
     def columnCount(self, parent=None):
@@ -25,40 +24,40 @@ class FileNameProxyModel(QSortFilterProxyModel):
 
     def data(self, index, role):
         if index.column() == 0:
-            source_index = self.mapToSource(index)
+            sourceIndex = self.mapToSource(index)
             if role == Qt.ItemDataRole.DisplayRole:
-                return self.sourceModel().fileName(source_index)
+                return self.sourceModel().fileName(sourceIndex)
             elif role == Qt.ItemDataRole.DecorationRole:
-                return self.sourceModel().fileIcon(source_index)
+                return self.sourceModel().fileIcon(sourceIndex)
         return None
 
     def lessThan(self, left, right):
-        left_data = self.sourceModel().filePath(left)
-        right_data = self.sourceModel().filePath(right)
-        left_is_dir = self.sourceModel().isDir(left)
-        right_is_dir = self.sourceModel().isDir(right)
+        leftData: str = self.sourceModel().filePath(left)
+        rightData: str = self.sourceModel().filePath(right)
+        leftIsDir = self.sourceModel().isDir(left)
+        rightIsDir = self.sourceModel().isDir(right)
 
-        if left_is_dir != right_is_dir:
-            return left_is_dir
+        if leftIsDir != rightIsDir:
+            return leftIsDir
 
-        if self.sort_order == Qt.SortOrder.AscendingOrder:
-            return left_data.lower() < right_data.lower()
+        if self.sortOrder == Qt.SortOrder.AscendingOrder:
+            return leftData.lower() < rightData.lower()
         else:
-            return left_data.lower() > right_data.lower()
+            return leftData.lower() > rightData.lower()
 
     def sort(self, column, order):
-        self.sort_order = order
+        self.sortOrder = order
         super().sort(column, order)
 
-    def toggle_sort_order(self):
-        self.sort_order = Qt.SortOrder.DescendingOrder if self.sort_order == Qt.SortOrder.AscendingOrder else Qt.SortOrder.AscendingOrder
+    def toggleSortOrder(self):
+        self.sortOrder = Qt.SortOrder.DescendingOrder if self.sortOrder == Qt.SortOrder.AscendingOrder else Qt.SortOrder.AscendingOrder
         self.invalidate()
-        self.sort(0, self.sort_order)
+        self.sort(0, self.sortOrder)
 
 class CustomHeaderView(QHeaderView):
     def __init__(self, orientation, notepad, parent=None):
         super().__init__(orientation, parent)
-        self.notepad = notepad
+        self.notepad: Notepad = notepad
         self.setSectionsClickable(True)
         self.setStretchLastSection(True)
 
@@ -68,14 +67,14 @@ class CustomHeaderView(QHeaderView):
         
         if logicalIndex == 0:
             icon = self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowLeft)
-            icon_size = QSize(16, 16)
-            icon_rect = QRect(rect.left() + 4, rect.top() + (rect.height() - icon_size.height()) // 2,
-                              icon_size.width(), icon_size.height())
-            icon.paint(painter, icon_rect)
+            iconSize = QSize(16, 16)
+            iconRect = QRect(rect.left() + 4, rect.top() + (rect.height() - iconSize.height()) // 2,
+                             iconSize.width(), iconSize.height())
+            icon.paint(painter, iconRect)
 
-            text_rect = QRect(rect.left() + icon_size.width() + 8, rect.top(), rect.width() - icon_size.width() - 8, rect.height())
-            painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter, "Name")
-        
+            textRect = QRect(rect.left() + iconSize.width() + 8, rect.top(), rect.width() - iconSize.width() - 8, rect.height())
+            painter.drawText(textRect, Qt.AlignmentFlag.AlignVCenter, "Name")
+
         painter.restore()
 
     def sizeHint(self):
@@ -84,13 +83,13 @@ class CustomHeaderView(QHeaderView):
     def mousePressEvent(self, event):
         index = self.logicalIndexAt(event.position().toPoint())
         if index == 0:
-            icon_width = 20
-            if event.position().x() <= icon_width:
-                self.notepad.go_up_directory()
+            iconWidth = 20
+            if event.position().x() <= iconWidth:
+                self.notepad.goUpDirectory()
             else:
-                proxy_model = self.notepad.file_explorer.model()
-                proxy_model.toggle_sort_order()
-                self.notepad.file_explorer.sortByColumn(0, proxy_model.sort_order)
+                proxyModel: FileNameProxyModel = self.notepad.fileExplorer.model()
+                proxyModel.toggleSortOrder()
+                self.notepad.fileExplorer.sortByColumn(0, proxyModel.sortOrder)
         else:
             super().mousePressEvent(event)
 
@@ -102,16 +101,16 @@ class Notepad(QMainWindow):
         self.setAcceptDrops(True)
 
         self.settings = Settings()
-        self.file_manager = FileManager(self)
+        self.fileManager = FileManager(self)
         self.app = app
 
         QLoggingCategory.setFilterRules("qt.modelview.debug=true")
-        self.init_ui()
-        self.setup_autosave()
-        self.load_settings()
-        self.load_last_session()
+        self.initUi()
+        self.setupAutosave()
+        self.loadSettings()
+        self.loadLastSession()
 
-        self.check_for_updates(silent=True)
+        QTimer.singleShot(2000, lambda: self.checkForUpdates(silent=True))
 
         geometry = self.settings.get('window_geometry')
         if geometry:
@@ -121,130 +120,130 @@ class Notepad(QMainWindow):
         if state:
             self.restoreState(state)
 
-    def init_ui(self):
-        self.create_menu_bar()
-        self.create_main_layout()
+    def initUi(self):
+        self.createMenuBar()
+        self.createMainLayout()
 
-    def create_menu_bar(self):
+    def createMenuBar(self):
         menubar = self.menuBar()
 
-        file_menu = menubar.addMenu('File')
-        edit_menu = menubar.addMenu('Edit')
-        view_menu = menubar.addMenu('View')
-        settings_menu = menubar.addMenu('Settings')
+        fileMenu = menubar.addMenu('File')
+        editMenu = menubar.addMenu('Edit')
+        viewMenu = menubar.addMenu('View')
+        settingsMenu = menubar.addMenu('Settings')
 
-        new_action = QAction('New', self)
-        new_action.setShortcut('Ctrl+N')
-        new_action.triggered.connect(self.new_file)
-        file_menu.addAction(new_action)
+        newAction = QAction('New', self)
+        newAction.setShortcut('Ctrl+N')
+        newAction.triggered.connect(self.newFile)
+        fileMenu.addAction(newAction)
 
-        open_action = QAction('Open', self)
-        open_action.setShortcut('Ctrl+O')
-        open_action.triggered.connect(self.file_manager.open_file)
-        file_menu.addAction(open_action)
+        openAction = QAction('Open', self)
+        openAction.setShortcut('Ctrl+O')
+        openAction.triggered.connect(self.fileManager.openFile)
+        fileMenu.addAction(openAction)
 
-        open_folder_action = QAction('Open Folder', self)
-        open_folder_action.setShortcut('Ctrl+Shift+O')
-        open_folder_action.triggered.connect(self.open_folder)
-        file_menu.addAction(open_folder_action)
+        openFolderAction = QAction('Open Folder', self)
+        openFolderAction.setShortcut('Ctrl+Shift+O')
+        openFolderAction.triggered.connect(self.openFolder)
+        fileMenu.addAction(openFolderAction)
 
-        save_action = QAction('Save', self)
-        save_action.setShortcut('Ctrl+S')
-        save_action.triggered.connect(self.file_manager.save_file)
-        file_menu.addAction(save_action)
+        saveAction = QAction('Save', self)
+        saveAction.setShortcut('Ctrl+S')
+        saveAction.triggered.connect(self.fileManager.saveFile)
+        fileMenu.addAction(saveAction)
 
-        save_as_action = QAction('Save As', self)
-        save_as_action.setShortcut('Ctrl+Shift+S')
-        save_as_action.triggered.connect(self.file_manager.save_file_as)
-        file_menu.addAction(save_as_action)
+        saveAsAction = QAction('Save As', self)
+        saveAsAction.setShortcut('Ctrl+Shift+S')
+        saveAsAction.triggered.connect(self.fileManager.saveFileAs)
+        fileMenu.addAction(saveAsAction)
 
-        undo_action = QAction('Undo', self)
-        undo_action.setShortcut(QKeySequence.StandardKey.Undo)
-        undo_action.triggered.connect(self.undo)
-        edit_menu.addAction(undo_action)
+        undoAction = QAction('Undo', self)
+        undoAction.setShortcut(QKeySequence.StandardKey.Undo)
+        undoAction.triggered.connect(self.undo)
+        editMenu.addAction(undoAction)
 
-        redo_action = QAction('Redo', self)
-        redo_action.setShortcut(QKeySequence.StandardKey.Redo)
-        redo_action.triggered.connect(self.redo)
-        edit_menu.addAction(redo_action)
+        redoAction = QAction('Redo', self)
+        redoAction.setShortcut(QKeySequence.StandardKey.Redo)
+        redoAction.triggered.connect(self.redo)
+        editMenu.addAction(redoAction)
 
-        find_action = QAction("Find", self)
-        find_action.setShortcut(QKeySequence.StandardKey.Find)
-        find_action.triggered.connect(self.find_in_current_editor)
+        findAction = QAction("Find", self)
+        findAction.setShortcut(QKeySequence.StandardKey.Find)
+        findAction.triggered.connect(self.findInCurrentEditor)
 
-        toggle_file_explorer = QAction('Toggle File Explorer', self)
-        toggle_file_explorer.setShortcut('Ctrl+B')
-        toggle_file_explorer.triggered.connect(self.toggle_file_explorer)
-        view_menu.addAction(toggle_file_explorer)
+        toggleFileExplorer = QAction('Toggle File Explorer', self)
+        toggleFileExplorer.setShortcut('Ctrl+B')
+        toggleFileExplorer.triggered.connect(self.toggleFileExplorer)
+        viewMenu.addAction(toggleFileExplorer)
 
-        self.autosave_action = QAction('Autosave', self, checkable=True)
-        self.autosave_action.setChecked(self.settings.get('autosave_enabled', True))
-        self.autosave_action.triggered.connect(self.toggle_autosave)
-        settings_menu.addAction(self.autosave_action)
-        check_updates_action = QAction('Check for Updates', self)
-        check_updates_action.triggered.connect(self.check_for_updates)
-        settings_menu.addAction(check_updates_action)
+        self.autosaveAction = QAction('Autosave', self, checkable=True)
+        self.autosaveAction.setChecked(self.settings.get('autosave_enabled', True))
+        self.autosaveAction.triggered.connect(self.toggleAutosave)
+        settingsMenu.addAction(self.autosaveAction)
+        checkUpdatesAction = QAction('Check for Updates', self)
+        checkUpdatesAction.triggered.connect(self.checkForUpdates)
+        settingsMenu.addAction(checkUpdatesAction)
         self.lineNumber = QAction('Line Numbers', self, checkable=True)
         self.lineNumber.setChecked(self.settings.get('show_line_numbers', True))
-        self.lineNumber.triggered.connect(self.toggle_line_numbers)
-        settings_menu.addAction(self.lineNumber)
-        theme_menu = settings_menu.addMenu('Theme')
-        theme_group = QActionGroup(self)
+        self.lineNumber.triggered.connect(self.toggleLineNumbers)
+        settingsMenu.addAction(self.lineNumber)
+        themeMenu = settingsMenu.addMenu('Theme')
+        themeGroup = QActionGroup(self)
 
         themes = [('System', 'system'), ('Light', 'light'), ('Dark', 'dark')]
-        for theme_name, theme_value in themes:
-            theme_action = QAction(theme_name, self, checkable=True)
-            theme_action.setData(theme_value)
-            theme_group.addAction(theme_action)
-            theme_menu.addAction(theme_action)
-            if theme_value == self.settings.get('theme', 'system'):
-                theme_action.setChecked(True)
+        for themeName, themeValue in themes:
+            themeAction = QAction(themeName, self, checkable=True)
+            themeAction.setData(themeValue)
+            themeGroup.addAction(themeAction)
+            themeMenu.addAction(themeAction)
+            if themeValue == self.settings.get('theme', 'system'):
+                themeAction.setChecked(True)
 
-        theme_group.triggered.connect(self.change_theme)
+        themeGroup.triggered.connect(self.changeTheme)
 
     
-    def create_main_layout(self):
-        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.setCentralWidget(self.main_splitter)
+    def createMainLayout(self):
+        self.mainSplitter = QSplitter(Qt.Orientation.Horizontal)
+        self.setCentralWidget(self.mainSplitter)
     
-        file_explorer_widget = QWidget()
-        file_explorer_layout = QVBoxLayout(file_explorer_widget)
-        file_explorer_layout.setContentsMargins(0, 0, 0, 0)
+        fileExplorerWidget = QWidget()
+        fileExplorerLayout = QVBoxLayout(fileExplorerWidget)
+        fileExplorerLayout.setContentsMargins(0, 0, 0, 0)
 
     
         try:
-            self.file_explorer = QTreeView()
-            self.file_model = QFileSystemModel()
-            self.setup_file_explorer()
+            self.fileExplorer = QTreeView()
+            self.fileModel = QFileSystemModel()
+            self.setupFileExplorer()
     
 
-            home_path = os.path.expanduser('~')
-            downloads_path = os.path.join(home_path, "Downloads")
-            source_index = self.file_model.index(downloads_path)
-            
-            proxy_index = self.proxy_model.mapFromSource(source_index)
-            
-            self.file_explorer.setRootIndex(proxy_index)
-            
-            self.file_explorer.clicked.connect(self.on_file_explorer_single_clicked)
-            self.file_explorer.doubleClicked.connect(self.on_file_explorer_double_clicked)
-    
-            file_explorer_layout.addWidget(self.file_explorer)
-            self.main_splitter.addWidget(file_explorer_widget)
+            homePath = os.path.expanduser('~')
+            downloadsPath = os.path.join(homePath, "Downloads")
+            sourceIndex = self.fileModel.index(downloadsPath)
+
+            proxyIndex = self.proxyModel.mapFromSource(sourceIndex)
+
+            self.fileExplorer.setRootIndex(proxyIndex)
+
+            self.fileExplorer.clicked.connect(self.onFileExplorerSingleClicked)
+            self.fileExplorer.doubleClicked.connect(self.onFileExplorerDoubleClicked)
+
+            fileExplorerLayout.addWidget(self.fileExplorer)
+            self.mainSplitter.addWidget(fileExplorerWidget)
     
         except Exception as e:
-            QMessageBox.critical(self.notepad, "Error", f"Error in create_main_layout: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Error in create_main_layout: {str(e)}")
     
-        self.tab_widget = QTabWidget()
-        self.tab_widget.setTabsClosable(True)
-        self.tab_widget.tabCloseRequested.connect(self.close_tab)
-        self.main_splitter.addWidget(self.tab_widget)
+        self.tabWidget = QTabWidget()
+        self.tabWidget.setTabsClosable(True)
+        self.tabWidget.tabCloseRequested.connect(self.closeTab)
+        self.mainSplitter.addWidget(self.tabWidget)
     
-        self.main_splitter.setStretchFactor(1, 1)
-        self.main_splitter.setSizes([200, 800])
-        self.tab_widget.currentChanged.connect(self.on_tab_changed)
+        self.mainSplitter.setStretchFactor(1, 1)
+        self.mainSplitter.setSizes([200, 800])
+        self.tabWidget.currentChanged.connect(self.onTabChanged)
     
-    def on_header_clicked(self, logical_index):
+    def onHeaderClicked(self, logicalIndex):
         pass
 
     def dragEnterEvent(self, event):
@@ -256,218 +255,204 @@ class Notepad(QMainWindow):
     def dropEvent(self, event):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
         if files:
-            for file_path in files:
-                if os.path.isfile(file_path):
+            for filePath in files:
+                if os.path.isfile(filePath):
                     # Open each dropped file in a new tab
-                    self.file_manager.open_file(file_path)
+                    self.fileManager.openFile(filePath)
         event.accept()
 
-    def toggle_line_numbers(self, checked):
+    def toggleLineNumbers(self, checked):
         self.settings.set('show_line_numbers', checked)
-        for i in range(self.tab_widget.count()):
-            editor = self.tab_widget.widget(i)
+        for i in range(self.tabWidget.count()):
+            editor = self.tabWidget.widget(i)
             if isinstance(editor, Editor):
-                editor.toggle_line_numbers()
+                editor.toggleLineNumbers()
 
-    def new_file(self):
-        self.file_manager.new_file()
+    def newFile(self):
+        self.fileManager.newFile()
 
-    def on_tab_changed(self, index):
-        current_editor = self.tab_widget.widget(index)
-        if isinstance(current_editor, Editor):
-            if current_editor in self.file_manager.file_paths:
-                self.setWindowTitle(f"Pady - {self.file_manager.file_paths[current_editor]}")
+    def onTabChanged(self, index):
+        currentEditor = self.tabWidget.widget(index)
+        if isinstance(currentEditor, Editor):
+            if currentEditor in self.fileManager.filePaths:
+                self.setWindowTitle(f"Pady - {self.fileManager.filePaths[currentEditor]}")
             else:
                 self.setWindowTitle("Pady - Untitled")
 
-    def close_tab(self, index):
+    def closeTab(self, index):
         """Clean up when a tab is closed"""
-        self.file_manager.close_tab(index)
+        self.fileManager.closeTab(index)
 
     def undo(self):
-        current_editor = self.tab_widget.currentWidget()
-        if isinstance(current_editor, Editor):
-            current_editor.undo()
+        currentEditor = self.tabWidget.currentWidget()
+        if isinstance(currentEditor, Editor):
+            currentEditor.undo()
 
     def redo(self):
-        current_editor = self.tab_widget.currentWidget()
-        if isinstance(current_editor, Editor):
-            current_editor.redo()
+        currentEditor = self.tabWidget.currentWidget()
+        if isinstance(currentEditor, Editor):
+            currentEditor.redo()
 
     def find(self):
-        current_editor = self.tab_widget.currentWidget()
-        if isinstance(current_editor, Editor):
-            current_editor.find_dialog()
+        currentEditor = self.tabWidget.currentWidget()
+        if isinstance(currentEditor, Editor):
+            currentEditor.findDialog()
 
-    def toggle_file_explorer(self):
-        if self.file_explorer.isVisible():
-            self.file_explorer.hide()
+    def toggleFileExplorer(self):
+        if self.fileExplorer.isVisible():
+            self.fileExplorer.hide()
         else:
-            self.file_explorer.show()
+            self.fileExplorer.show()
 
-    def load_last_session(self):
-        session_data = self.settings.load_session()
-        if session_data and session_data.get('recent_files'):
-            self.file_manager.open_files_from_session(session_data)
+    def loadLastSession(self):
+        sessionData = self.settings.loadSession()
+        if sessionData and sessionData.get('recent_files'):
+            self.fileManager.openFilesFromSession(sessionData)
         else:
-            self.file_manager.new_file()
+            self.fileManager.newFile()
 
     def closeEvent(self, event):
-        session_data = {
-            'recent_files': self.file_manager.get_all_open_files(),
-            'active_tab': self.tab_widget.currentIndex()
+        sessionData = {
+            'recent_files': self.fileManager.getAllOpenFiles(),
+            'active_tab': self.tabWidget.currentIndex()
         }
         
-        self.settings.save_session(session_data)
+        self.settings.saveSession(sessionData)
         self.settings.set('window_geometry', self.saveGeometry())
         self.settings.set('window_state', self.saveState())
         
         event.accept()
 
-    def open_folder(self):
-        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
-        if folder_path:
-            source_index = self.file_model.index(folder_path)
-            proxy_index = self.proxy_model.mapFromSource(source_index)
-            self.file_explorer.setRootIndex(proxy_index)
-            self.current_folder = folder_path
+    def openFolder(self):
+        folderPath = QFileDialog.getExistingDirectory(self, "Select Folder")
+        if folderPath:
+            sourceIndex = self.fileModel.index(folderPath)
+            proxyIndex = self.proxyModel.mapFromSource(sourceIndex)
+            self.fileExplorer.setRootIndex(proxyIndex)
+            self.currentFolder = folderPath
 
-    def on_file_explorer_double_clicked(self, index):
-        source_index = self.proxy_model.mapToSource(index)
-        if self.file_model.isDir(source_index):
-            self.file_explorer.setRootIndex(index)
+    def onFileExplorerDoubleClicked(self, index):
+        sourceIndex = self.proxyModel.mapToSource(index)
+        if self.fileModel.isDir(sourceIndex):
+            self.fileExplorer.setRootIndex(index)
         else:
-            file_path = self.file_model.filePath(source_index)
-            self.file_manager.open_file(file_path)
+            filePath = self.fileModel.filePath(sourceIndex)
+            self.fileManager.openFile(filePath)
 
-    def on_file_explorer_single_clicked(self, index):
-        source_index = self.proxy_model.mapToSource(index)
-        if self.file_model.isDir(source_index):
-            if self.file_explorer.isExpanded(index):
-                self.file_explorer.collapse(index)
+    def onFileExplorerSingleClicked(self, index):
+        sourceIndex = self.proxyModel.mapToSource(index)
+        if self.fileModel.isDir(sourceIndex):
+            if self.fileExplorer.isExpanded(index):
+                self.fileExplorer.collapse(index)
             else:
-                self.file_explorer.expand(index)
+                self.fileExplorer.expand(index)
         else:
-            file_path = self.file_model.filePath(source_index)
-            self.file_manager.open_file(file_path)
+            filePath = self.fileModel.filePath(sourceIndex)
+            self.fileManager.openFile(filePath)
 
 
-    def setup_file_explorer(self):
-        self.file_model = QFileSystemModel()
-        home_path = os.path.expanduser("~")
-        self.downloads_path = os.path.join(home_path, "Downloads")
-        self.file_model.setRootPath(self.downloads_path)
-        
-        self.proxy_model = FileNameProxyModel(self)
-        self.proxy_model.setSourceModel(self.file_model)
-        
-        self.file_explorer.setModel(self.proxy_model)
-        self.file_explorer.setHeader(CustomHeaderView(Qt.Orientation.Horizontal, self))
-        self.file_explorer.setColumnWidth(0, 200)
-        self.file_explorer.setHeaderHidden(False)
-        self.file_explorer.setAlternatingRowColors(True)
-        self.file_explorer.setSortingEnabled(True)
-        self.file_explorer.setSelectionMode(QTreeView.SelectionMode.SingleSelection)
-        
-        self.file_explorer.header().sectionClicked.connect(self.on_header_clicked)
-        
-        self.file_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.NoDotAndDotDot | QDir.Filter.Hidden)
-        
-        self.file_explorer.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-        self.proxy_model.sort(0, Qt.SortOrder.AscendingOrder)
-        
-        self._set_file_explorer_root(self.downloads_path)
-    
-    def _set_file_explorer_root(self, path):
-        source_root_index = self.file_model.index(path)
-        proxy_root_index = self.proxy_model.mapFromSource(source_root_index)
-        self.file_explorer.setRootIndex(proxy_root_index)
-        self.current_folder = path
-    
-    def go_up_directory(self):
-        current_index = self.file_explorer.rootIndex()
-        parent_index = current_index.parent()
-        if parent_index.isValid():
-            self.file_explorer.setRootIndex(parent_index)
-            self.current_folder = self.file_model.filePath(self.proxy_model.mapToSource(parent_index))
+    def setupFileExplorer(self):
+        self.fileModel = QFileSystemModel()
+        homePath = os.path.expanduser("~")
+        self.downloadsPath = os.path.join(homePath, "Downloads")
+        self.fileModel.setRootPath(self.downloadsPath)
 
-    def load_settings(self):
-        self.set_theme(self.settings.get('theme', 'system'))
+        self.proxyModel = FileNameProxyModel(self)
+        self.proxyModel.setSourceModel(self.fileModel)
+
+        self.fileExplorer.setModel(self.proxyModel)
+        self.fileExplorer.setHeader(CustomHeaderView(Qt.Orientation.Horizontal, self))
+        self.fileExplorer.setColumnWidth(0, 200)
+        self.fileExplorer.setHeaderHidden(False)
+        self.fileExplorer.setAlternatingRowColors(True)
+        self.fileExplorer.setSortingEnabled(True)
+        self.fileExplorer.setSelectionMode(QTreeView.SelectionMode.SingleSelection)
+        
+        self.fileExplorer.header().sectionClicked.connect(self.onHeaderClicked)
+        
+        self.fileModel.setFilter(QDir.Filter.AllEntries | QDir.Filter.NoDotAndDotDot | QDir.Filter.Hidden)
+        
+        self.fileExplorer.sortByColumn(0, Qt.SortOrder.AscendingOrder)
+        self.proxyModel.sort(0, Qt.SortOrder.AscendingOrder)
+
+        self.setFileExplorerRoot(self.downloadsPath)
+
+    def setFileExplorerRoot(self, path):
+        sourceRootIndex = self.fileModel.index(path)
+        proxyRootIndex = self.proxyModel.mapFromSource(sourceRootIndex)
+        self.fileExplorer.setRootIndex(proxyRootIndex)
+        self.currentFolder = path
+
+    def goUpDirectory(self):
+        currentIndex = self.fileExplorer.rootIndex()
+        parentIndex = currentIndex.parent()
+        if parentIndex.isValid():
+            self.fileExplorer.setRootIndex(parentIndex)
+            self.currentFolder = self.fileModel.filePath(self.proxyModel.mapToSource(parentIndex))
+
+    def loadSettings(self):
+        self.setTheme(self.settings.get('theme', 'system'))
         if self.settings.get('autosave_enabled', True):
-            self.autosave_timer.start()
+            self.autosaveTimer.start()
         else:
-            self.autosave_timer.stop()
+            self.autosaveTimer.stop()
 
-    def setup_autosave(self):
-        self.autosave_timer = QTimer(self)
-        self.autosave_timer.timeout.connect(self.file_manager.autosave)
+    def setupAutosave(self):
+        self.autosaveTimer = QTimer(self)
+        self.autosaveTimer.timeout.connect(self.fileManager.autosave)
         if self.settings.get('autosave_enabled', True):
-            self.autosave_timer.start(5000)
+            self.autosaveTimer.start(5000)
         else:
-            self.autosave_timer.stop()
+            self.autosaveTimer.stop()
 
-    def toggle_autosave(self, enabled):
+    def toggleAutosave(self, enabled):
         self.settings.set('autosave_enabled', enabled)
         if enabled:
-            self.autosave_timer.start(5000)
+            self.autosaveTimer.start(5000)
         else:
-            self.autosave_timer.stop()
+            self.autosaveTimer.stop()
 
-    def change_theme(self, action):
+    def changeTheme(self, action):
         theme = action.data()
-        self.set_theme(theme)
+        self.setTheme(theme)
         self.settings.set('theme', theme)
 
-    def set_theme(self, theme):
+    def setTheme(self, theme):
         if theme == 'system':
-            apply_theme(self.app, theme="system")
+            applyTheme(self.app, theme="system")
         elif theme == 'light':
-            apply_theme(self.app, theme="light")
+            applyTheme(self.app, theme="light")
         elif theme == 'dark':
-            apply_theme(self.app, theme="dark")
+            applyTheme(self.app, theme="dark")
         
-    def find_in_current_editor(self):
-        current_editor = self.tab_widget.currentWidget()
-        if isinstance(current_editor, Editor):
-            current_editor.show_find_widget()
+    def findInCurrentEditor(self):
+        currentEditor = self.tabWidget.currentWidget()
+        if isinstance(currentEditor, Editor):
+            currentEditor.showFindWidget()
 
-    def check_for_updates(self, silent=False):
-        current_version = version.Version("pady-v1.7".strip("pady-"))
-        github_api_url = "https://api.github.com/repos/feketefh/pady/releases/latest"
+    def checkForUpdates(self, silent=False):
+        currentVersion = version.Version("pady-v1.7".strip("pady-"))
+        githubApiUrl = "https://api.github.com/repos/feketefh/pady/releases/latest"
 
         try:
-            response = requests.get(github_api_url)
+            response: requests.Response = requests.get(githubApiUrl, timeout=3)  # Add timeout
             response.raise_for_status()
-            latest_release: str = response.json()
-            latest_version = version.Version(latest_release['tag_name'].strip("pady-"))
+            latestRelease: dict = response.json()
+            latestVersion = version.Version(latestRelease['tag_name'].strip("pady-"))
 
-            if latest_version > current_version:
-                if not silent:
-                    reply = QMessageBox.question(
-                        self,
-                        "Update Available",
-                        f"A new version ({latest_version}) is available. Do you want to download new version from Github?",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                        QMessageBox.StandardButton.Yes
-                    )
-                    if reply == QMessageBox.StandardButton.Yes:
-                        try:
-                            webbrowser.open(latest_release['html_url'], new=1)
-                        except Exception as e:
-                            QMessageBox.critical(self, "Update Error", f"Failed to open release: {str(e)}")
-                else:
-                    reply = QMessageBox.question(
-                        self,
-                        "Update Available",
-                        f"A new version ({latest_version}) is available. Do you want to download new version from Github?",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                        QMessageBox.StandardButton.Yes
-                    )
-                    if reply == QMessageBox.StandardButton.Yes:
-                        try:
-                            webbrowser.open(latest_release['html_url'], new=1)
-                        except Exception as e:
-                            QMessageBox.critical(self, "Update Error", f"Failed to open release: {str(e)}")
+            if latestVersion > currentVersion:
+                reply = QMessageBox.question(
+                    self,
+                    "Update Available",
+                    f"A new version ({latestVersion}) is available. Do you want to download it from GitHub?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    try:
+                        webbrowser.open(latestRelease['html_url'], new=1)
+                    except Exception as e:
+                        QMessageBox.critical(self, "Update Error", f"Failed to open release: {str(e)}")
             else:
                 if not silent:
                     QMessageBox.information(self, "No Updates", "You are using the latest version.")
@@ -476,4 +461,4 @@ class Notepad(QMainWindow):
                 QMessageBox.warning(self, "Update Check Failed", "Failed to check for updates. Please try again later.")
         except Exception as e:
             if not silent:
-                QMessageBox.warning(self, "Update Check Failed", f"An unexpected error occurred while checking for updates: {str(e)}")
+                QMessageBox.warning(self, "Update Check Failed", f"An unexpected error occurred: {str(e)}")
