@@ -1,201 +1,205 @@
 import os
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from modules.editor import Editor
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from modules.notepad import Notepad
 
 class FileManager:
-    def __init__(self, notepad):
+    def __init__(self, notepad: "Notepad"):
         self.notepad = notepad
-        self.file_paths = {}
-        self.untitled_count = 0
-        self.last_saved_content = {}
+        self.filePaths = {}
+        self.untitledCount = 0
+        self.lastSavedContent = {}
 
     
-    def open_file(self, file_path=None):
-        if not file_path:
-            file_path, _ = QFileDialog.getOpenFileName(self.notepad, "Open File", "", "Text Files (*.txt);;All Files (*)")
+    def openFile(self, filePath=None):
+        if not filePath:
+            filePath, _ = QFileDialog.getOpenFileName(self.notepad, "Open File", "", "Text Files (*.txt);;All Files (*)")
         
-        if file_path:
-            for editor, existing_path in self.file_paths.items():
-                if existing_path == file_path:
-                    index = self.notepad.tab_widget.indexOf(editor)
+        if filePath:
+            for editor, existingPath in self.filePaths.items():
+                if existingPath == filePath:
+                    index = self.notepad.tabWidget.indexOf(editor)
                     if index != -1:
-                        self.notepad.tab_widget.setCurrentIndex(index)
+                        self.notepad.tabWidget.setCurrentIndex(index)
                     return
-            
-            self.notepad.settings.add_recent_file(file_path)
-            
-            editor = Editor(path=file_path, settings=self.notepad.settings)
-            if editor.load_file_with_error_handling(file_path):
-                index = self.notepad.tab_widget.addTab(editor, os.path.basename(file_path))
-                self.notepad.tab_widget.setCurrentIndex(index)
-                self.file_paths[editor] = file_path
+
+            self.notepad.settings.addRecentFile(filePath)
+
+            editor = Editor(path=filePath, settings=self.notepad.settings)
+            if editor.loadFile(filePath):
+                index = self.notepad.tabWidget.addTab(editor, os.path.basename(filePath))
+                self.notepad.tabWidget.setCurrentIndex(index)
+                self.filePaths[editor] = filePath
             else:
                 editor.deleteLater()
 
-    def save_file(self):
-        current_editor = self.notepad.tab_widget.currentWidget()
-        if current_editor in self.file_paths:
-            file_path = self.file_paths[current_editor]
-            self._save_to_file(current_editor, file_path)
+    def saveFile(self):
+        currentEditor = self.notepad.tabWidget.currentWidget()
+        if currentEditor in self.filePaths:
+            filePath = self.filePaths[currentEditor]
+            self.saveToFile(currentEditor, filePath)
         else:
-            self.save_file_as()
+            self.saveFileAs()
 
-    def save_file_as(self):
-        current_editor = self.notepad.tab_widget.currentWidget()
-        file_path, _ = QFileDialog.getSaveFileName(self.notepad, "Save File", "", "Text Files (*.txt);;All Files (*)")
-        if file_path:
-            self._save_to_file(current_editor, file_path)
-            self.file_paths[current_editor] = file_path
-            self.notepad.tab_widget.setTabText(self.notepad.tab_widget.currentIndex(), os.path.basename(file_path))
+    def saveFileAs(self):
+        currentEditor = self.notepad.tabWidget.currentWidget()
+        filePath, _ = QFileDialog.getSaveFileName(self.notepad, "Save File", "", "Text Files (*.txt);;All Files (*)")
+        if filePath:
+            self.saveToFile(currentEditor, filePath)
+            self.filePaths[currentEditor] = filePath
+            self.notepad.tabWidget.setTabText(self.notepad.tabWidget.currentIndex(), os.path.basename(filePath))
 
-    def _save_to_file(self, editor, file_path):
+    def saveToFile(self, editor: Editor, filePath: str):
         content = editor.toPlainText()
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(filePath, 'w', encoding='utf-8') as f:
                 f.write(content)
-            self.file_paths[editor] = file_path
-            self.last_saved_content[editor] = content
+            self.filePaths[editor] = filePath
+            self.lastSavedContent[editor] = content
 
-            self.notepad.settings.add_recent_file(file_path)
-            
-            tab_index = self.notepad.tab_widget.indexOf(editor)
-            if tab_index != -1:
-                self.notepad.tab_widget.setTabText(tab_index, os.path.basename(file_path))
+            self.notepad.settings.addRecentFile(filePath)
+
+            tabIndex = self.notepad.tabWidget.indexOf(editor)
+            if tabIndex != -1:
+                self.notepad.tabWidget.setTabText(tabIndex, os.path.basename(filePath))
         except Exception as e:
             QMessageBox.critical(self.notepad, "Error", f"Failed to save file: {str(e)}")
 
-    def open_file_from_explorer(self, index):
-        file_path = self.notepad.file_model.filePath(index)
-        if not self.notepad.file_model.isDir(index):
-            self.open_file(file_path)
+    def openFileFromExplorer(self, index):
+        filePath = self.notepad.fileModel.filePath(index)
+        if not self.notepad.fileModel.isDir(index):
+            self.openFile(filePath)
             
     def autosave(self):
         """Autosave all open files that have been saved before (not untitled files)"""
         try:
-            for i in range(self.notepad.tab_widget.count()):
-                editor = self.notepad.tab_widget.widget(i)
+            for i in range(self.notepad.tabWidget.count()):
+                editor = self.notepad.tabWidget.widget(i)
                 if isinstance(editor, Editor):
-                    file_path = self.file_paths.get(editor, "")
+                    filePath = self.filePaths.get(editor, "")
                     
-                    if file_path and file_path != "" and os.path.exists(os.path.dirname(file_path)):
+                    if filePath and filePath != "" and os.path.exists(os.path.dirname(filePath)):
                         try:
                             content = editor.toPlainText()
                             
-                            if self.last_saved_content.get(editor) != content:
-                                with open(file_path, 'w', encoding='utf-8') as f:
+                            if self.lastSavedContent.get(editor) != content:
+                                with open(filePath, 'w', encoding='utf-8') as f:
                                     f.write(content)
-                                self.last_saved_content[editor] = content
-                                print(f"Autosaved: {file_path}")
+                                self.lastSavedContent[editor] = content
+                                print(f"Autosaved: {filePath}")
                             
                         except Exception as e:
-                            print(f"Autosave failed for {file_path}: {e}")
+                            print(f"Autosave failed for {filePath}: {e}")
                     else:
-                        tab_name = self.notepad.tab_widget.tabText(i)
-                        print(f"Skipping autosave for untitled file: {tab_name}")
+                        tabName = self.notepad.tabWidget.tabText(i)
+                        print(f"Skipping autosave for untitled file: {tabName}")
         except Exception as e:
             print(f"Autosave error: {e}")
 
-    def new_file(self):
+    def newFile(self):
         editor = Editor(settings=self.notepad.settings)
-        self.untitled_count += 1
-        index = self.notepad.tab_widget.addTab(editor, f"Untitled-{self.untitled_count}")
-        self.notepad.tab_widget.setCurrentIndex(index)
-        self.file_paths[editor] = ""
+        self.untitledCount += 1
+        index = self.notepad.tabWidget.addTab(editor, f"Untitled-{self.untitledCount}")
+        self.notepad.tabWidget.setCurrentIndex(index)
+        self.filePaths[editor] = ""
 
-    def get_all_open_files(self):
+    def getAllOpenFiles(self):
         """Get all currently open files with their tab information"""
-        open_files = []
-        for i in range(self.notepad.tab_widget.count()):
-            editor = self.notepad.tab_widget.widget(i)
+        openFiles = []
+        for i in range(self.notepad.tabWidget.count()):
+            editor = self.notepad.tabWidget.widget(i)
             if isinstance(editor, Editor):
-                file_path = self.file_paths.get(editor, "")
-                tab_text = self.notepad.tab_widget.tabText(i)
-                
-                is_untitled = (not file_path or 
-                              file_path == "" or 
-                              tab_text.startswith("Untitled-"))
-                
-                file_info = {
-                    'tab_name': tab_text,
-                    'file_path': file_path if (file_path and not tab_text.startswith("Untitled-")) else None,
-                    'is_untitled': is_untitled,
-                    'content': editor.toPlainText() if is_untitled else None,
+                filePath = self.filePaths.get(editor, "")
+                tabText = self.notepad.tabWidget.tabText(i)
+
+                isUntitled = (not filePath or
+                              filePath == "" or
+                              tabText.startswith("Untitled-"))
+
+                fileInfo = {
+                    'tab_name': tabText,
+                    'filePath': filePath if (filePath and not tabText.startswith("Untitled-")) else None,
+                    'is_untitled': isUntitled,
+                    'content': editor.toPlainText() if isUntitled else None,
                     'cursor_position': editor.textCursor().position()
                 }
-                open_files.append(file_info)
-        
-        return open_files
+                openFiles.append(fileInfo)
 
-    def open_files_from_session(self, session_data):
+        return openFiles
+
+    def openFilesFromSession(self, sessionData: dict):
         """Restore files from session data"""
-        open_files = session_data.get('recent_files', [])
-        active_tab = session_data.get('active_tab', 0)
-        
-        if not open_files:
-            self.new_file()
+        openFiles = sessionData.get('recent_files', [])
+        activeTab = sessionData.get('active_tab', 0)
+
+        if not openFiles:
+            self.newFile()
             return
-            
-        for file_info in open_files:
-            if isinstance(file_info, dict):
-                file_path = file_info.get('file_path')
-                is_untitled = file_info.get('is_untitled', False)
-                content = file_info.get('content', '')
-                tab_name = file_info.get('tab_name', 'Untitled')
-                cursor_position = file_info.get('cursor_position', 0)
-                
-                if is_untitled or not file_path:
+
+        for fileInfo in openFiles:
+            if isinstance(fileInfo, dict):
+                filePath = fileInfo.get('filePath')
+                isUntitled = fileInfo.get('is_untitled', False)
+                content = fileInfo.get('content', '')
+                tabName: str = fileInfo.get('tab_name', 'Untitled')
+                cursorPosition = fileInfo.get('cursor_position', 0)
+
+                if isUntitled or not filePath:
                     editor = Editor(settings=self.notepad.settings)
                     if content:
                         editor.setPlainText(content)
                         cursor = editor.textCursor()
-                        cursor.setPosition(min(cursor_position, len(content)))
+                        cursor.setPosition(min(cursorPosition, len(content)))
                         editor.setTextCursor(cursor)
-                    
-                    if tab_name.startswith('Untitled-'):
+
+                    if tabName.startswith('Untitled-'):
                         try:
-                            num = int(tab_name.split('-')[1])
-                            if num > self.untitled_count:
-                                self.untitled_count = num
+                            num = int(tabName.split('-')[1])
+                            if num > self.untitledCount:
+                                self.untitledCount = num
                         except:
                             pass
-                    
-                    self.notepad.tab_widget.addTab(editor, tab_name)
-                    self.file_paths[editor] = ""
+
+                    self.notepad.tabWidget.addTab(editor, tabName)
+                    self.filePaths[editor] = ""
                 else:
-                    if os.path.exists(file_path):
+                    if os.path.exists(filePath):
                         try:
-                            editor = Editor(path=file_path, settings=self.notepad.settings)
-                            if editor.load_file_with_error_handling(file_path):
-                                tab_name = os.path.basename(file_path)
-                                self.notepad.tab_widget.addTab(editor, tab_name)
-                                self.file_paths[editor] = file_path
+                            editor = Editor(path=filePath, settings=self.notepad.settings)
+                            if editor.loadFile(filePath):
+                                tabName = os.path.basename(filePath)
+                                self.notepad.tabWidget.addTab(editor, tabName)
+                                self.filePaths[editor] = filePath
                                 
                                 cursor = editor.textCursor()
-                                cursor.setPosition(min(cursor_position, len(editor.toPlainText())))
+                                cursor.setPosition(min(cursorPosition, len(editor.toPlainText())))
                                 editor.setTextCursor(cursor)
                         except Exception as e:
-                            print(f"Error opening file {file_path}: {e}")
+                            print(f"Error opening file {filePath}: {e}")
                             continue
                     else:
-                        print(f"File not found: {file_path}")
-                        
-        if 0 <= active_tab < self.notepad.tab_widget.count():
-            self.notepad.tab_widget.setCurrentIndex(active_tab)
-        
-        if self.notepad.tab_widget.count() == 0:
-            self.new_file()
+                        print(f"File not found: {filePath}")
 
-    def get_current_file_path(self):
-        current_editor = self.notepad.tab_widget.currentWidget()
-        return self.file_paths.get(current_editor)
+        if 0 <= activeTab < self.notepad.tabWidget.count():
+            self.notepad.tabWidget.setCurrentIndex(activeTab)
 
-    def close_tab(self, index):
+        if self.notepad.tabWidget.count() == 0:
+            self.newFile()
+
+    def getCurrentFilePath(self):
+        currentEditor = self.notepad.tabWidget.currentWidget()
+        return self.filePaths.get(currentEditor)
+
+    def closeTab(self, index):
         """Clean up when a tab is closed"""
-        editor = self.notepad.tab_widget.widget(index)
+        editor = self.notepad.tabWidget.widget(index)
         if isinstance(editor, Editor):
-            if editor in self.file_paths:
-                del self.file_paths[editor]
-            if hasattr(self, 'last_saved_content') and editor in self.last_saved_content:
-                del self.last_saved_content[editor]
-    
-        self.notepad.tab_widget.removeTab(index)
+            if editor in self.filePaths:
+                del self.filePaths[editor]
+            if hasattr(self, 'lastSavedContent') and editor in self.lastSavedContent:
+                del self.lastSavedContent[editor]
+
+        self.notepad.tabWidget.removeTab(index)
