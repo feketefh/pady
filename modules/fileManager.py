@@ -1,6 +1,7 @@
 import os
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from modules.editor import Editor
+import hashlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -58,7 +59,12 @@ class FileManager:
             with open(filePath, 'w', encoding='utf-8') as f:
                 f.write(content)
             self.filePaths[editor] = filePath
-            self.lastSavedContent[editor] = content
+
+            # Hybrid: Store hash for large files, full content for small files
+            if len(content) > 100_000:  # 100KB threshold
+                self.lastSavedContent[editor] = hashlib.md5(content.encode()).hexdigest()
+            else:
+                self.lastSavedContent[editor] = content
 
             self.notepad.settings.addRecentFile(filePath)
 
@@ -68,11 +74,6 @@ class FileManager:
         except Exception as e:
             QMessageBox.critical(self.notepad, "Error", f"Failed to save file: {str(e)}")
 
-    def openFileFromExplorer(self, index):
-        filePath = self.notepad.fileModel.filePath(index)
-        if not self.notepad.fileModel.isDir(index):
-            self.openFile(filePath)
-            
     def autosave(self):
         """Autosave all open files that have been saved before (not untitled files)"""
         try:
@@ -80,17 +81,28 @@ class FileManager:
                 editor = self.notepad.tabWidget.widget(i)
                 if isinstance(editor, Editor):
                     filePath = self.filePaths.get(editor, "")
-                    
+
                     if filePath and filePath != "" and os.path.exists(os.path.dirname(filePath)):
                         try:
                             content = editor.toPlainText()
-                            
-                            if self.lastSavedContent.get(editor) != content:
+                            lastSaved = self.lastSavedContent.get(editor)
+
+                            hasChanged = False
+                            if len(content) > 100_000:
+                                currentHash = hashlib.md5(content.encode()).hexdigest()
+                                hasChanged = (lastSaved != currentHash)
+                                if hasChanged:
+                                    self.lastSavedContent[editor] = currentHash
+                            else:
+                                hasChanged = (lastSaved != content)
+                                if hasChanged:
+                                    self.lastSavedContent[editor] = content
+
+                            if hasChanged:
                                 with open(filePath, 'w', encoding='utf-8') as f:
                                     f.write(content)
-                                self.lastSavedContent[editor] = content
                                 print(f"Autosaved: {filePath}")
-                            
+
                         except Exception as e:
                             print(f"Autosave failed for {filePath}: {e}")
                     else:
@@ -98,6 +110,11 @@ class FileManager:
                         print(f"Skipping autosave for untitled file: {tabName}")
         except Exception as e:
             print(f"Autosave error: {e}")
+
+    def openFileFromExplorer(self, index):
+        filePath = self.notepad.fileModel.filePath(index)
+        if not self.notepad.fileModel.isDir(index):
+            self.openFile(filePath)
 
     def newFile(self):
         editor = Editor(settings=self.notepad.settings)
